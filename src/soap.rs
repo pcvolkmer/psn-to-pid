@@ -73,11 +73,11 @@ impl SoapClient {
         }
     }
 
-    pub async fn get_value_for(&self, pseudonym: &str) -> Result<String, SoapClientError> {
+    pub async fn get_value_for(&self, pseudonym: &str, domain: Option<String>) -> Result<String, SoapClientError> {
         let response_text = self
             .client
             .post(&self.gpas_url)
-            .body(get_value_for_request_body(pseudonym, &self.domain))
+            .body(get_value_for_request_body(pseudonym, &domain.unwrap_or(self.domain.clone())))
             .basic_auth(self.username.clone(), self.password.clone())
             .send()
             .await

@@ -8,11 +8,13 @@ Sie ist daher nur für interne Zwecke einer Treuhandstelle geeignet!
 Beim Start der Anwendung können Parameter angegeben werden.
 
 ```
-Usage: mv64e-psn-to-pid [OPTIONS] --gpas-domain-name <GPAS_DOMAIN_NAME>
+Usage: psn-to-pid [OPTIONS] --gpas-domain-name <GPAS_DOMAIN_NAME>
 
 Options:
       --listen <LISTEN>
           Address and port for HTTP requests [env: LISTEN=] [default: [::]:3000]
+      --allow-domain-override
+          If set, allows overriding the domain in the HTTP request [env: ALLOW_DOMAIN_OVERRIDE=]
       --gpas-soap-url <GPAS_SOAP_URL>
           gPAS SOAP URL [env: GPAS_SOAP_URL=] [default: https://demo.ths-greifswald.de/gpas/gpasService]
       --gpas-domain-name <GPAS_DOMAIN_NAME>
@@ -29,7 +31,7 @@ Options:
 
 ### Beispiel für einen HTTP-Request
 
-Anfrage mit *curl*, hier mit beiliegendem Test-File:
+Anfrage mit *curl* unter Verwendung der konfigurierten Domain als Standard:
 
 ```bash
 curl http://localhost:3000/?psn=psn_12345
@@ -39,8 +41,33 @@ Antwort:
 
 ```
 HTTP/1.1 200 OK
-content-length: ...
+content-length: 13
 date: Fri, 11 Sep 2026 18:00:00 GMT
 
 original_54321
+```
+
+Antwort, wenn das Pseudonym unbekannt ist:
+
+```
+HTTP/1.1 400 Bad Request
+content-length: 38
+date: Fri, 11 Sep 2026 18:00:00 GMT
+
+invalid check digits for 'psn_unknown'
+```
+
+Bei einer Anfrage eine nicht existierende Domain mit angegeben, wird ein Fehler zurückgegeben.
+*Achtung*: nur in Verbindung mit `--allow-domain-override` bzw. `ALLOW_DOMAIN_OVERRIDE=true` möglich.
+
+```bash
+curl http://localhost:3000/?psn=psn_12345&domain=unbekannte.domain
+```
+
+```
+HTTP/1.1 400 Bad Request
+content-length: 48
+date: Fri, 11 Sep 2026 18:00:00 GMT
+
+db object for domain unbekannte.domain not found
 ```

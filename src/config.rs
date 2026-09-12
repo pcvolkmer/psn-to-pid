@@ -13,6 +13,12 @@ pub struct Config {
     pub listen: String,
     #[arg(
         long,
+        env = "ALLOW_DOMAIN_OVERRIDE",
+        help = "If set, allows overriding the domain in the HTTP request"
+    )]
+    pub allow_domain_override: bool,
+    #[arg(
+        long,
         env = "GPAS_SOAP_URL",
         default_value = "https://demo.ths-greifswald.de/gpas/gpasService",
         help = "gPAS SOAP URL"
