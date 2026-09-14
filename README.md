@@ -57,7 +57,7 @@ date: Fri, 11 Sep 2026 18:00:00 GMT
 invalid check digits for 'psn_unknown'
 ```
 
-Bei einer Anfrage eine nicht existierende Domain mit angegeben, wird ein Fehler zurückgegeben.
+Wird bei einer Anfrage eine nicht existierende Domain mit angegeben, wird ein Fehler zurückgegeben.
 *Achtung*: nur in Verbindung mit `--allow-domain-override` bzw. `ALLOW_DOMAIN_OVERRIDE=true` möglich.
 
 ```bash
