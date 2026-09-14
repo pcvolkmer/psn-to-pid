@@ -73,11 +73,18 @@ impl SoapClient {
         }
     }
 
-    pub async fn get_value_for(&self, pseudonym: &str, domain: Option<String>) -> Result<String, SoapClientError> {
+    pub async fn get_value_for(
+        &self,
+        pseudonym: &str,
+        domain: Option<String>,
+    ) -> Result<String, SoapClientError> {
         let response_text = self
             .client
             .post(&self.gpas_url)
-            .body(get_value_for_request_body(pseudonym, &domain.unwrap_or(self.domain.clone())))
+            .body(get_value_for_request_body(
+                pseudonym,
+                &domain.unwrap_or(self.domain.clone()),
+            ))
             .basic_auth(self.username.clone(), self.password.clone())
             .send()
             .await
@@ -118,4 +125,92 @@ fn get_value_for_request_body(pseudonym: &str, domain: &str) -> String {
     </soapenv:Body>
 </soapenv:Envelope>"#
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::soap::{SoapClient, SoapClientError};
+    use httpmock::MockServer;
+
+    #[tokio::test]
+    async fn should_return_original_value() {
+        let mock_server = MockServer::start();
+        let mock = mock_server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/gpas/gpasService");
+            then.status(200).body(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:psn="http://psn.ttp.ganimed.icmvc.emau.org/">
+    <soapenv:Body>
+        <psn:getValueForResponse>
+            <value>original_value</value>
+        </psn:getValueForResponse>
+    </soapenv:Body>
+</soapenv:Envelope>"#,
+            );
+        });
+
+        let gpas_url = format!("{}/gpas/gpasService", &mock_server.base_url());
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+
+        let result = soap_client.get_value_for("test_pseudonym", None).await;
+
+        mock.assert();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "original_value");
+    }
+
+    #[tokio::test]
+    async fn should_return_soap_fault() {
+        let mock_server = MockServer::start();
+        let mock = mock_server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/gpas/gpasService");
+            then.status(200).body(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:psn="http://psn.ttp.ganimed.icmvc.emau.org/">
+    <soapenv:Body>
+        <psn:Fault>
+            <faultstring>invalid check digits for 'psn_unknown'</faultstring>
+        </psn:Fault>
+    </soapenv:Body>
+</soapenv:Envelope>"#,
+            );
+        });
+
+        let gpas_url = format!("{}/gpas/gpasService", &mock_server.base_url());
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+
+        let result = soap_client.get_value_for("psn_unknown", None).await;
+
+        mock.assert();
+        match result {
+            Err(SoapClientError::Fault(msg)) => assert_eq!(msg, "invalid check digits for 'psn_unknown'"),
+            _ => panic!("Expected an SoapClientError::Fault"),
+        }
+    }
+
+    #[tokio::test]
+    async fn should_return_http_error() {
+        let mock_server = MockServer::start();
+        let mock = mock_server.mock(|when, then| {
+            when.method(httpmock::Method::POST);
+            then.status(404);
+        });
+
+        let gpas_url = format!("{}/wrongPath", &mock_server.base_url());
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+
+        let result = soap_client.get_value_for("psn_unknown", None).await;
+
+        mock.assert();
+        match result {
+            Err(SoapClientError::Error(_)) => {},
+            _ => panic!("Expected an SoapClientError::Error"),
+        }
+    }
 }
