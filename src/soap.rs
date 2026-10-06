@@ -218,4 +218,42 @@ mod tests {
             _ => panic!("Expected an SoapClientError::Error"),
         }
     }
+
+    #[tokio::test]
+    async fn should_use_http_basic() {
+        let mock_server = MockServer::start();
+        let mock = mock_server.mock(|when, then| {
+            when.method(httpmock::Method::POST)
+                .path("/gpas/gpasService")
+                .header("Authorization", "Basic dXNlcm5hbWU6cGFzc3dvcmQ=");
+            then.status(200).body(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:psn="http://psn.ttp.ganimed.icmvc.emau.org/">
+    <soapenv:Body>
+        <psn:getValueForResponse>
+            <value>original_value</value>
+        </psn:getValueForResponse>
+    </soapenv:Body>
+</soapenv:Envelope>"#,
+            );
+        });
+
+        let gpas_url = format!("{}/gpas/gpasService", mock_server.base_url());
+        let soap_client = SoapClient::new(
+            gpas_url,
+            "test_domain".to_string(),
+            Some("username".to_string()),
+            Some("password".to_string()),
+        );
+
+        let result = soap_client.get_value_for("test_pseudonym", None).await;
+
+        mock.assert();
+        match result {
+            Ok(value) => assert_eq!(value, "original_value"),
+            _ => panic!("Expected an result value"),
+        }
+    }
 }
