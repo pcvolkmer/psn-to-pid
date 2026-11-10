@@ -52,6 +52,7 @@ impl SoapClient {
         domain: String,
         username: Option<String>,
         password: Option<String>,
+        accept_invalid_certs: bool,
     ) -> Self {
         let mut default_headers = HeaderMap::new();
         default_headers.insert(
@@ -64,6 +65,7 @@ impl SoapClient {
             client: Client::builder()
                 .default_headers(default_headers)
                 .connect_timeout(Duration::from_secs(10))
+                .danger_accept_invalid_certs(accept_invalid_certs)
                 .user_agent("mv64e-vnr-to-pid")
                 .build()
                 .expect("client created"),
@@ -154,7 +156,7 @@ mod tests {
         });
 
         let gpas_url = format!("{}/gpas/gpasService", mock_server.base_url());
-        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None, false);
 
         let result = soap_client.get_value_for("test_pseudonym", None).await;
 
@@ -186,7 +188,7 @@ mod tests {
         });
 
         let gpas_url = format!("{}/gpas/gpasService", mock_server.base_url());
-        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None, false);
 
         let result = soap_client.get_value_for("psn_unknown", None).await;
 
@@ -208,7 +210,7 @@ mod tests {
         });
 
         let gpas_url = format!("{}/wrongPath", mock_server.base_url());
-        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None);
+        let soap_client = SoapClient::new(gpas_url, "test_domain".to_string(), None, None, false);
 
         let result = soap_client.get_value_for("psn_unknown", None).await;
 
@@ -246,6 +248,7 @@ mod tests {
             "test_domain".to_string(),
             Some("username".to_string()),
             Some("password".to_string()),
+            false
         );
 
         let result = soap_client.get_value_for("test_pseudonym", None).await;
