@@ -23,17 +23,7 @@ struct PsnDomainQuery {
 
 #[allow(clippy::expect_used)]
 async fn handle_get(query: Query<PsnQuery>, Extension(client): Extension<SoapClient>) -> Response {
-    match client.get_value_for(&query.psn, None).await {
-        Ok(response) => Response::new(response.into()),
-        Err(SoapClientError::Fault(msg)) => Response::builder()
-            .status(400)
-            .body(msg.into())
-            .expect("valid response expected"),
-        Err(SoapClientError::Error(msg)) => Response::builder()
-            .status(500)
-            .body(msg.into())
-            .expect("valid response expected"),
-    }
+    create_response(client, &query.psn, None).await
 }
 
 #[allow(clippy::expect_used)]
@@ -41,22 +31,64 @@ async fn handle_get_with_domain(
     query: Query<PsnDomainQuery>,
     Extension(client): Extension<SoapClient>,
 ) -> Response {
-    match client.get_value_for(&query.psn, query.domain.clone()).await {
+    create_response(client, &query.psn, query.domain.clone()).await
+}
+
+async fn create_response(client: SoapClient, psn: &str, domain: Option<String>) -> Response {
+    match client.get_value_for(psn, domain).await {
         Ok(response) => Response::new(response.into()),
-        Err(SoapClientError::Fault(msg)) => Response::builder()
-            .status(400)
-            .body(msg.into())
-            .expect("valid response expected"),
-        Err(SoapClientError::Error(msg)) => Response::builder()
-            .status(500)
-            .body(msg.into())
-            .expect("valid response expected"),
+        Err(SoapClientError::Fault(msg)) => {
+            log::error!("SOAP fault: {}", msg);
+            Response::builder()
+                .status(400)
+                .body(msg.into())
+                .expect("valid response expected")
+        },
+        Err(SoapClientError::Error(msg)) => {
+            log::error!("SOAP error: {}", msg);
+            Response::builder()
+                .status(500)
+                .body(msg.into())
+                .expect("valid response expected")
+        },
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    println!(
+        r"                       _                    _     _
+ _ __  ___ _ __       | |_ ___        _ __ (_) __| |
+| '_ \/ __| '_ \ _____| __/ _ \ _____| '_ \| |/ _` |
+| |_) \__ \ | | |_____| || (_) |_____| |_) | | (_| |
+| .__/|___/_| |_|      \__\___/      | .__/|_|\__,_|
+|_|                                  |_|
+
+ :: psn-to-pid ::    (v{})
+",
+        env!("CARGO_PKG_VERSION")
+    );
+
+    #[cfg(debug_assertions)]
+    {
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::INFO)
+            .init();
+    }
+
     let config = config::Config::parse();
+
+    log::info!("Starting psn-to-pid v{} with PID {}", env!("CARGO_PKG_VERSION"), std::process::id());
+    log::info!("Default domain: '{}'", config.gpas_domain_name);
+    log::info!("Allow domain override: '{}'", config.allow_domain_override);
+    log::info!("Accept invalid certificates: '{}'", config.accept_invalid_certs);
 
     let client = SoapClient::new(
         config.gpas_soap_url,
@@ -81,7 +113,7 @@ async fn main() -> Result<(), String> {
 
     match tokio::net::TcpListener::bind(&config.listen).await {
         Ok(listener) => {
-            log::info!("Starting application listening on '{}'", config.listen);
+            log::info!("Application listening on '{}'", config.listen);
             if let Err(err) = axum::serve(listener, routes)
                 .with_graceful_shutdown(shutdown_signal())
                 .await
@@ -89,7 +121,7 @@ async fn main() -> Result<(), String> {
                 return Err(err.to_string());
             }
         }
-        Err(err) => return Err(format!("Cannot listening on '{}': {}", config.listen, err)),
+        Err(err) => return Err(format!("Cannot listen on '{}': {}", config.listen, err)),
     }
 
     Ok(())
