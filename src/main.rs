@@ -63,6 +63,7 @@ async fn main() -> Result<(), String> {
         config.gpas_domain_name,
         config.gpas_username,
         config.gpas_password,
+        config.accept_invalid_certs,
     );
 
     let routes = Router::new()

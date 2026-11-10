@@ -19,6 +19,12 @@ pub struct Config {
     pub allow_domain_override: bool,
     #[arg(
         long,
+        env = "ACCEPT_INVALID_CERTS",
+        help = "If set, allows accepting invalid certificates"
+    )]
+    pub accept_invalid_certs: bool,
+    #[arg(
+        long,
         env = "GPAS_SOAP_URL",
         default_value = "https://demo.ths-greifswald.de/gpas/gpasService",
         help = "gPAS SOAP URL"
