@@ -21,12 +21,10 @@ struct PsnDomainQuery {
     domain: Option<String>,
 }
 
-#[allow(clippy::expect_used)]
 async fn handle_get(query: Query<PsnQuery>, Extension(client): Extension<SoapClient>) -> Response {
     create_response(client, &query.psn, None).await
 }
 
-#[allow(clippy::expect_used)]
 async fn handle_get_with_domain(
     query: Query<PsnDomainQuery>,
     Extension(client): Extension<SoapClient>,
@@ -34,18 +32,19 @@ async fn handle_get_with_domain(
     create_response(client, &query.psn, query.domain.clone()).await
 }
 
+#[allow(clippy::expect_used)]
 async fn create_response(client: SoapClient, psn: &str, domain: Option<String>) -> Response {
     match client.get_value_for(psn, domain).await {
         Ok(response) => Response::new(response.into()),
         Err(SoapClientError::Fault(msg)) => {
-            log::error!("SOAP fault: {}", msg);
+            log::error!("SOAP fault: {msg}");
             Response::builder()
                 .status(400)
                 .body(msg.into())
                 .expect("valid response expected")
         },
         Err(SoapClientError::Error(msg)) => {
-            log::error!("SOAP error: {}", msg);
+            log::error!("SOAP error: {msg}");
             Response::builder()
                 .status(500)
                 .body(msg.into())
