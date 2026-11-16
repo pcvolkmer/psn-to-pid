@@ -17,6 +17,7 @@ reqwest = { version = "0.13", features = ["rustls"], default-features = false }
 
 [dev-dependencies]
 httpmock = "0.9"
+tower = "0.5"
 
 # Lints
 
