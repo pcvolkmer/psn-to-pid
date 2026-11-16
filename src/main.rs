@@ -42,14 +42,14 @@ async fn create_response(client: SoapClient, psn: &str, domain: Option<String>) 
                 .status(400)
                 .body(msg.into())
                 .expect("valid response expected")
-        },
+        }
         Err(SoapClientError::Error(msg)) => {
             log::error!("SOAP error: {msg}");
             Response::builder()
                 .status(500)
                 .body(msg.into())
                 .expect("valid response expected")
-        },
+        }
     }
 }
 
@@ -84,10 +84,17 @@ async fn main() -> Result<(), String> {
 
     let config = config::Config::parse();
 
-    log::info!("Starting psn-to-pid v{} with PID {}", env!("CARGO_PKG_VERSION"), std::process::id());
+    log::info!(
+        "Starting psn-to-pid v{} with PID {}",
+        env!("CARGO_PKG_VERSION"),
+        std::process::id()
+    );
     log::info!("Default domain: '{}'", config.gpas_domain_name);
     log::info!("Allow domain override: '{}'", config.allow_domain_override);
-    log::info!("Accept invalid certificates: '{}'", config.accept_invalid_certs);
+    log::info!(
+        "Accept invalid certificates: '{}'",
+        config.accept_invalid_certs
+    );
 
     let client = SoapClient::new(
         config.gpas_soap_url,
