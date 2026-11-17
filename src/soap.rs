@@ -248,7 +248,7 @@ mod tests {
             "test_domain".to_string(),
             Some("username".to_string()),
             Some("password".to_string()),
-            false
+            false,
         );
 
         let result = soap_client.get_value_for("test_pseudonym", None).await;
@@ -257,6 +257,29 @@ mod tests {
         match result {
             Ok(value) => assert_eq!(value, "original_value"),
             _ => panic!("Expected an result value"),
+        }
+    }
+
+    #[tokio::test]
+    async fn should_return_error_on_connection_failure() {
+        let soap_client = SoapClient::new(
+            "http://127.0.0.1:9/gpas/gpasService".to_string(),
+            "test_domain".to_string(),
+            None,
+            None,
+            false,
+        );
+
+        let result = soap_client.get_value_for("test_pseudonym", None).await;
+
+        match result {
+            Err(SoapClientError::Error(msg)) => {
+                assert!(
+                    !msg.is_empty(),
+                    "Error message should not be empty, got: {msg}"
+                );
+            }
+            _ => panic!("Expected SoapClientError::Error on connection failure"),
         }
     }
 }
