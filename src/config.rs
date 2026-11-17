@@ -13,10 +13,19 @@ pub struct Config {
     pub listen: String,
     #[arg(
         long,
+        conflicts_with = "allowed_domains",
         env = "ALLOW_DOMAIN_OVERRIDE",
-        help = "If set, allows overriding the domain in the HTTP request"
+        help = "If set, allows overriding the domain in the HTTP request with any domain"
     )]
     pub allow_domain_override: bool,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        conflicts_with = "allow_domain_override",
+        env = "ALLOWED_DOMAINS",
+        help = "If set, allows overriding the domain in the HTTP request limited to default domain and given domains"
+    )]
+    pub allowed_domains: Vec<String>,
     #[arg(
         long,
         env = "ACCEPT_INVALID_CERTS",
@@ -30,7 +39,7 @@ pub struct Config {
         help = "gPAS SOAP URL"
     )]
     pub gpas_soap_url: String,
-    #[arg(long, env = "GPAS_DOMAIN_NAME", help = "gPAS domain name")]
+    #[arg(long, env = "GPAS_DOMAIN_NAME", help = "gPAS default domain name")]
     pub gpas_domain_name: String,
     #[arg(long, env = "GPAS_USERNAME", help = "gPAS HTTP-BASIC username")]
     pub gpas_username: Option<String>,
