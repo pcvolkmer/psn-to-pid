@@ -23,7 +23,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     needs:
       - test
@@ -51,3 +51,15 @@ jobs:
           docker tag ghcr.io/${{ github.repository }} ghcr.io/${{ github.repository }}:${{ github.ref_name }}
           docker push ghcr.io/${{ github.repository }}
           docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          
+
+      - name: Save Image
+        if: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+        run: docker save -o ${{ github.event.repository.name }}-image.tar ghcr.io/${{ github.repository }}
+
+      - name: Upload Tar
+        if: ${{ github.event_name == 'release' && github.event.action == 'created' }}
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            ${{ github.event.repository.name }}-image.tar
